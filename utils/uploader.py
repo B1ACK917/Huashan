@@ -5,7 +5,7 @@ import os
 import re
 
 
-class Akira:
+class Tuploader:
     def __init__(self, token, cookie):
         self._find_path_re = r'path:\s+"(/[^"]+)"'
         self._set(token, cookie)
