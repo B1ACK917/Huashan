@@ -1,15 +1,15 @@
-from Shinomiya.Src.logger import *
 import requests
 import json
 import os
 import re
+import time
+
+from Shinomiya.Src.logger import *
 
 
 class Tuploader:
-    def __init__(self, token, cookie):
+    def __init__(self):
         self._find_path_re = r'path:\s+"(/[^"]+)"'
-        self._set(token, cookie)
-        self._regenerate()
 
     def _regenerate(self):
         self._headers = {
@@ -60,6 +60,29 @@ class Tuploader:
     def set(self, token, cookie):
         self._set(token, cookie)
         self._regenerate()
+        
+    def login(self, token, passwd):
+        from playwright.sync_api import sync_playwright
+        _playwright = sync_playwright().start()
+        with _playwright.chromium.launch(headless=True) as browser:
+            with browser.new_context() as context:
+                page = context.new_page()
+                url = f"https://cloud.tsinghua.edu.cn/u/d/{token}/"
+                page.goto(url)
+                page.wait_for_load_state("networkidle")
+                page.locator("[id='password']").type(passwd)
+                page.keyboard.press('Enter')
+                time.sleep(3)
+                page.goto(url)
+                page.wait_for_load_state("networkidle")
+                cookies = []
+                csrf_token = None
+                for cookie in context.cookies(url):
+                    if cookie['name'] == 'sfcsrftoken':
+                        csrf_token = cookie['value']
+                    cookies.append(f"{cookie['name']}={cookie['value']}")
+                cookies = '; '.join(cookies)
+        self.set(token, cookies)
 
     def upload(self, path_to_file, parent_dir=None):
         assert self._get_upload_link()
